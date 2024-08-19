@@ -4,15 +4,22 @@
   "description": "GraphQL Gateway for Aaraa.AI chatbot platform",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js"
+    "start": "nodemon src/server.js",
+    "dev": "nodemon src/index.js",
+    "build": "echo 'No build step required'",
+    "test": "echo 'No test specified' && exit 1"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.632.0",
     "@aws-sdk/lib-dynamodb": "^3.632.0",
+    "apollo-server": "^3.13.0",
     "apollo-server-lambda": "^3.6.2",
     "aws-sdk": "^2.1047.0",
-    "graphql": "^15.5.0",
+    "graphql": "^15.9.0",
     "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
   },
   "author": "Asik Mydeen",
   "license": "MIT"

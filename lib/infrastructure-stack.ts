@@ -41,31 +41,17 @@ export class InfrastructureStack extends cdk.Stack {
 
     // DynamoDB Tables
     const chatbotTable = new dynamodb.Table(this, 'ChatbotTable', {
-      partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
-      tableName: 'Chatbots',
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-    });
+  partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING }, // Ensure unique ID for each chatbot
+  tableName: 'Chatbots',
+  removalPolicy: cdk.RemovalPolicy.DESTROY,
+});
+
 
     const documentTable = new dynamodb.Table(this, 'DocumentTable', {
       partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
       tableName: 'Documents',
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
-
-    // Lambda Function for GraphQL Server
-    const graphqlLambda = new lambda.Function(this, 'GraphqlLambda', {
-      runtime: lambda.Runtime.NODEJS_18_X,
-      code: lambda.Code.fromAsset('graphql-gateway'),
-      handler: 'src/index.handler',
-      environment: {
-        CHATBOT_TABLE_NAME: chatbotTable.tableName,
-        DOCUMENT_TABLE_NAME: documentTable.tableName,
-      },
-    });
-
-    // Grant Lambda permissions to access DynamoDB tables
-    chatbotTable.grantReadWriteData(graphqlLambda);
-    documentTable.grantReadWriteData(graphqlLambda);
 
     // Define the hosted zone
     const hostedZone = route53.HostedZone.fromLookup(this, 'HostedZone', {
@@ -79,6 +65,17 @@ export class InfrastructureStack extends cdk.Stack {
       validation: acm.CertificateValidation.fromDns(hostedZone),
     });
 
+    // Lambda Function for GraphQL Server (Bundled directly)
+    const graphqlLambda = new lambda.Function(this, 'GraphqlLambda', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      code: lambda.Code.fromAsset('graphql-gateway'), // This will bundle and deploy the code directly
+      handler: 'src/index.handler', // Adjust according to your actual handler
+      environment: {
+        CHATBOT_TABLE_NAME: chatbotTable.tableName,
+        DOCUMENT_TABLE_NAME: documentTable.tableName,
+      },
+    });
+
     // API Gateway for GraphQL
     const graphqlApi = new apigateway.RestApi(this, 'GraphqlApi', {
       restApiName: 'GraphQL Service',
@@ -89,7 +86,12 @@ export class InfrastructureStack extends cdk.Stack {
     });
 
     const graphqlIntegration = new apigateway.LambdaIntegration(graphqlLambda);
+
     graphqlApi.root.addMethod('POST', graphqlIntegration);
+
+    // Grant Lambda permissions to access DynamoDB tables
+    chatbotTable.grantReadWriteData(graphqlLambda);
+    documentTable.grantReadWriteData(graphqlLambda);
 
     // Custom Domain Name for API Gateway
     const apiDomain = new apigateway.DomainName(this, 'ApiDomainName', {
@@ -138,21 +140,20 @@ export class InfrastructureStack extends cdk.Stack {
       zone: hostedZone,
     });
 
-    // CI/CD Pipeline
+    // CI/CD Pipeline for Website Deployment
     const sourceOutput = new codepipeline.Artifact();
-    const infraBuildOutput = new codepipeline.Artifact();
+    const websiteBuildOutput = new codepipeline.Artifact();
 
     const sourceAction = new codepipelineActions.GitHubSourceAction({
       actionName: 'GitHub_Source',
       owner: 'AsikCyberDev', // Replace with your GitHub username
-      repo: 'aaraa-ai-infrastructure', // Replace with your infra repo name
+      repo: 'aaraa-ai-website', // Replace with your website repo name
       oauthToken: cdk.SecretValue.secretsManager('my-github-token'), // Store GitHub token in Secrets Manager
       output: sourceOutput,
       branch: 'main', // Replace with your branch name
     });
 
-    // Add a new build project for synthesizing the CDK infrastructure stack
-    const cdkBuildProject = new codebuild.PipelineProject(this, 'CdkBuildProject', {
+    const websiteBuildProject = new codebuild.PipelineProject(this, 'WebsiteBuildProject', {
       environment: {
         buildImage: codebuild.LinuxBuildImage.STANDARD_5_0,
       },
@@ -160,42 +161,33 @@ export class InfrastructureStack extends cdk.Stack {
         version: '0.2',
         phases: {
           install: {
-            commands: [
-              'npm install -g aws-cdk',
-              'npm install',
-            ],
+            commands: ['npm install'], // Adjust based on your project setup
           },
           build: {
-            commands: [
-              'npx cdk synth',
-            ],
+            commands: ['npm run build'], // Adjust based on your project setup
           },
         },
         artifacts: {
-          'base-directory': 'cdk.out',
+          'base-directory': 'build', // Adjust based on your build output directory
           files: '**/*',
         },
       }),
     });
 
-    // Add the build action for the infrastructure stack
-    const infraBuildAction = new codepipelineActions.CodeBuildAction({
-      actionName: 'Infrastructure_CDK_Build',
-      project: cdkBuildProject,
+    const buildAction = new codepipelineActions.CodeBuildAction({
+      actionName: 'Website_Build',
+      project: websiteBuildProject,
       input: sourceOutput,
-      outputs: [infraBuildOutput],
+      outputs: [websiteBuildOutput],
     });
 
-    // Add deploy action to create/update CloudFormation stack from the synthesized template
-    const infraDeployAction = new codepipelineActions.CloudFormationCreateUpdateStackAction({
-      actionName: 'Infrastructure_CFN_Deploy',
-      templatePath: infraBuildOutput.atPath('InfrastructureStack.template.json'),
-      stackName: 'InfrastructureStack',
-      adminPermissions: true,
+    const deployAction = new codepipelineActions.S3DeployAction({
+      actionName: 'S3_Deploy',
+      bucket: websiteBucket,
+      input: websiteBuildOutput,
     });
 
-    // Create the pipeline and add stages
-    new codepipeline.Pipeline(this, 'InfrastructurePipeline', {
+    new codepipeline.Pipeline(this, 'WebsitePipeline', {
       stages: [
         {
           stageName: 'Source',
@@ -203,11 +195,11 @@ export class InfrastructureStack extends cdk.Stack {
         },
         {
           stageName: 'Build',
-          actions: [infraBuildAction],
+          actions: [buildAction],
         },
         {
           stageName: 'Deploy',
-          actions: [infraDeployAction],
+          actions: [deployAction],
         },
       ],
     });
