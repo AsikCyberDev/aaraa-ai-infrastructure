@@ -22,7 +22,7 @@ export class InfrastructureStack extends cdk.Stack {
     const websiteBucket = new s3.Bucket(this, 'WebsiteBucket', {
       websiteIndexDocument: 'index.html',
       websiteErrorDocument: 'index.html',
-      publicReadAccess: false, // Ensure direct public access is not allowed
+      publicReadAccess: false,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
     });
@@ -41,15 +41,26 @@ export class InfrastructureStack extends cdk.Stack {
 
     // DynamoDB Tables
     const chatbotTable = new dynamodb.Table(this, 'ChatbotTable', {
-  partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING }, // Ensure unique ID for each chatbot
-  tableName: 'Chatbots',
-  removalPolicy: cdk.RemovalPolicy.DESTROY,
-});
-
+      partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
+      tableName: 'Chatbots',
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
 
     const documentTable = new dynamodb.Table(this, 'DocumentTable', {
       partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
       tableName: 'Documents',
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    const userTable = new dynamodb.Table(this, 'UserTable', {
+      partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
+      tableName: 'Users',
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    const projectTable = new dynamodb.Table(this, 'ProjectTable', {
+      partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
+      tableName: 'Projects',
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
@@ -68,11 +79,13 @@ export class InfrastructureStack extends cdk.Stack {
     // Lambda Function for GraphQL Server (Bundled directly)
     const graphqlLambda = new lambda.Function(this, 'GraphqlLambda', {
       runtime: lambda.Runtime.NODEJS_18_X,
-      code: lambda.Code.fromAsset('graphql-gateway'), // This will bundle and deploy the code directly
-      handler: 'src/index.handler', // Adjust according to your actual handler
+      code: lambda.Code.fromAsset('graphql-gateway'),
+      handler: 'src/index.handler',
       environment: {
         CHATBOT_TABLE_NAME: chatbotTable.tableName,
         DOCUMENT_TABLE_NAME: documentTable.tableName,
+        USER_TABLE_NAME: userTable.tableName,
+        PROJECT_TABLE_NAME: projectTable.tableName,
       },
     });
 
@@ -92,6 +105,8 @@ export class InfrastructureStack extends cdk.Stack {
     // Grant Lambda permissions to access DynamoDB tables
     chatbotTable.grantReadWriteData(graphqlLambda);
     documentTable.grantReadWriteData(graphqlLambda);
+    userTable.grantReadWriteData(graphqlLambda);
+    projectTable.grantReadWriteData(graphqlLambda);
 
     // Custom Domain Name for API Gateway
     const apiDomain = new apigateway.DomainName(this, 'ApiDomainName', {
@@ -120,8 +135,8 @@ export class InfrastructureStack extends cdk.Stack {
             originPath: '/prod',
           }),
           viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-          allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL, // Allow all methods: GET, POST, etc.
-          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED, // Disable caching for API responses
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
         },
       },
     });
@@ -146,11 +161,11 @@ export class InfrastructureStack extends cdk.Stack {
 
     const sourceAction = new codepipelineActions.GitHubSourceAction({
       actionName: 'GitHub_Source',
-      owner: 'AsikCyberDev', // Replace with your GitHub username
-      repo: 'aaraa-ai-website', // Replace with your website repo name
-      oauthToken: cdk.SecretValue.secretsManager('my-github-token'), // Store GitHub token in Secrets Manager
+      owner: 'AsikCyberDev',
+      repo: 'aaraa-ai-website',
+      oauthToken: cdk.SecretValue.secretsManager('my-github-token'),
       output: sourceOutput,
-      branch: 'main', // Replace with your branch name
+      branch: 'main',
     });
 
     const websiteBuildProject = new codebuild.PipelineProject(this, 'WebsiteBuildProject', {
@@ -161,14 +176,14 @@ export class InfrastructureStack extends cdk.Stack {
         version: '0.2',
         phases: {
           install: {
-            commands: ['npm install'], // Adjust based on your project setup
+            commands: ['npm install'],
           },
           build: {
-            commands: ['npm run build'], // Adjust based on your project setup
+            commands: ['npm run build'],
           },
         },
         artifacts: {
-          'base-directory': 'build', // Adjust based on your build output directory
+          'base-directory': 'build',
           files: '**/*',
         },
       }),
