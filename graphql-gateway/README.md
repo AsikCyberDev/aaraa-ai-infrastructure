@@ -1,18 +1,4 @@
-# GraphQL Gateway for Aaraa.AI Chatbot Platform
-
-This is the GraphQL Gateway for the Aaraa.AI platform. It serves as the unified API entry point, interacting with multiple microservices to provide a cohesive GraphQL API.
-
-## Setup and Installation
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/your-repo/graphql-gateway.git
-   cd graphql-gateway
-
-
-### Queries and samples
-
-Here are the GraphQL API calls for various operations in your system. These mutations and queries assume the appropriate GraphQL schema is in place, as described earlier.
+Here’s a comprehensive list of GraphQL queries and mutations for your system, covering all user, project, chatbot, document, and API key management operations. Each operation includes a sample query or mutation along with example variables.
 
 ### 1. **Sign Up**
 Registers a new user in the system.
@@ -368,6 +354,67 @@ query ListUserProjects($userId: ID!) {
 }
 ```
 
+### 13. **Generate API Key**
+Generates a new API key for a chatbot.
+
+```graphql
+mutation GenerateApiKey($input: CreateApiKeyInput!) {
+  generateApiKey(input: $input) {
+    apiKeyId
+    key
+    created
+    chatbotId
+  }
+}
+```
+
+**Variables:**
+```json
+{
+  "input": {
+    "chatbotId": "chatbot-123"
+  }
+}
+```
+
+### 14. **Revoke API Key**
+Revokes an API key for a chatbot.
+
+```graphql
+mutation RevokeApiKey($chatbotId: ID!, $apiKeyId: ID!) {
+  revokeApiKey(chatbotId: $chatbotId, apiKeyId: $apiKeyId)
+}
+```
+
+**Variables:**
+```json
+{
+  "chatbotId": "chatbot-123",
+  "apiKeyId": "apikey-123"
+}
+```
+
+### 15. **List API Keys**
+Lists all API keys for a chatbot.
+
+```graphql
+query ListApiKeys($chatbotId: ID!) {
+  apiKeys(chatbotId: $chatbotId) {
+    apiKeyId
+    key
+    created
+    lastUsed
+  }
+}
+```
+
+**Variables:**
+```json
+{
+  "chatbotId": "chatbot-123"
+}
+```
+
 ### Summary
 - **Sign Up**: Registers a new user.
 - **Sign In**: Authenticates a user and generates a token.
@@ -378,5 +425,12 @@ query ListUserProjects($userId: ID!) {
 - **List Chatbots in a Project**: Retrieves chatbots within a project.
 - **List Documents in a Chatbot**: Retrieves documents within a chatbot.
 - **Delete Project**: Removes a project.
-- **Delete Chatbot**: Removes a chatbot.
+- **Delete Chatbot
+
+**: Removes a chatbot.
 - **Delete Document**: Removes a document.
+- **Generate API Key**: Generates a new API key for a chatbot.
+- **Revoke API Key**: Revokes an existing API key.
+- **List API Keys**: Retrieves API keys for a specific chatbot.
+
+This list provides a comprehensive set of operations you can perform on the Aaraa.AI Chatbot Platform via your GraphQL API. You can test these queries and mutations using any GraphQL client or playground.
