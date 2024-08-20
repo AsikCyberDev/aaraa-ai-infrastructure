@@ -22,10 +22,15 @@
     "strictPropertyInitialization": false,
     "typeRoots": [
       "./node_modules/@types"
-    ]
+    ],
+    "outDir": "./dist",
+    "rootDir": "./lib" // Keep rootDir as lib
   },
   "exclude": [
     "node_modules",
-    "cdk.out"
+    "cdk.out",
+    "dist",
+    "bin", // Exclude bin directory
+    "test" // Exclude test directory
   ]
 }
