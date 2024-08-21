@@ -13,20 +13,24 @@ export class DynamoDBSetup {
     this.chatbotTable = new dynamodb.Table(scope, 'ChatbotTable', {
       partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
       sortKey: { name: 'projectId', type: dynamodb.AttributeType.STRING },
-      tableName: 'Chatbots',
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    this.documentTable = new dynamodb.Table(scope, 'DocumentTable', {
-      partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
-      sortKey: { name: 'chatbotId', type: dynamodb.AttributeType.STRING },
-      tableName: 'Documents',
+       this.documentTable = new dynamodb.Table(scope, 'DocumentTable', {
+      partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },  // Document ID
+      sortKey: { name: 'projectId', type: dynamodb.AttributeType.STRING }, // Project ID
       removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    // Add a GSI to support querying by chatbotId
+    this.documentTable.addGlobalSecondaryIndex({
+      indexName: 'ChatbotIndex',
+      partitionKey: { name: 'chatbotId', type: dynamodb.AttributeType.STRING },
+      projectionType: dynamodb.ProjectionType.ALL,
     });
 
     this.userTable = new dynamodb.Table(scope, 'UserTable', {
       partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
-      tableName: 'Users',
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
@@ -52,14 +56,12 @@ export class DynamoDBSetup {
     this.projectTable = new dynamodb.Table(scope, 'ProjectTable', {
       partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
       sortKey: { name: 'userId', type: dynamodb.AttributeType.STRING },
-      tableName: 'Projects',
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
     this.apiKeyTable = new dynamodb.Table(scope, 'ApiKeyTable', {
       partitionKey: { name: 'chatbotId', type: dynamodb.AttributeType.STRING },
       sortKey: { name: 'apiKeyId', type: dynamodb.AttributeType.STRING },
-      tableName: 'ApiKeys',
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
   }
