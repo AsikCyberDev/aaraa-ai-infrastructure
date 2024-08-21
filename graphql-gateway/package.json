@@ -15,8 +15,11 @@
     "apollo-server": "^3.13.0",
     "apollo-server-lambda": "^3.6.2",
     "aws-sdk": "^2.1047.0",
+    "bcryptjs": "^2.4.3",
     "graphql": "^15.9.0",
-    "uuid": "^10.0.0"
+    "jsonwebtoken": "^9.0.2",
+    "uuid": "^10.0.0",
+    "winston": "^3.14.2"
   },
   "devDependencies": {
     "nodemon": "^2.0.22"

@@ -16,6 +16,7 @@ export class LambdaSetup {
         USER_TABLE_NAME: dynamoDBSetup.userTable.tableName,
         PROJECT_TABLE_NAME: dynamoDBSetup.projectTable.tableName,
         APIKEY_TABLE_NAME: dynamoDBSetup.apiKeyTable.tableName,
+        JWT_SECRET: 'your_secret_key', // Add this line
       },
     });
 
