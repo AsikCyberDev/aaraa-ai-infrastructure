@@ -1,7 +1,9 @@
+import { Duration } from 'aws-cdk-lib';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
 import { DynamoDBSetup } from './dynamodb-setup';
 import { S3Setup } from './s3-setup';
+
 
 export class LambdaSetup {
   public readonly graphqlLambda: lambda.Function;
@@ -10,6 +12,7 @@ export class LambdaSetup {
     // Define the Lambda function
     this.graphqlLambda = new lambda.Function(scope, 'GraphqlLambda', {
       runtime: lambda.Runtime.NODEJS_18_X,
+      timeout: Duration.minutes(10),
       code: lambda.Code.fromAsset('graphql-gateway'),
       handler: 'src/index.handler',
       environment: {
