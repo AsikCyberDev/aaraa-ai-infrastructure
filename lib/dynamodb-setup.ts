@@ -16,17 +16,33 @@ export class DynamoDBSetup {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-       this.documentTable = new dynamodb.Table(scope, 'DocumentTable', {
-      partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },  // Document ID
-      sortKey: { name: 'projectId', type: dynamodb.AttributeType.STRING }, // Project ID
+    this.documentTable = new dynamodb.Table(scope, 'DocumentTable', {
+      partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'projectId', type: dynamodb.AttributeType.STRING },
       removalPolicy: cdk.RemovalPolicy.DESTROY,
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
     });
 
-    // Add a GSI to support querying by chatbotId
+    // Keep the existing GSI
     this.documentTable.addGlobalSecondaryIndex({
       indexName: 'ChatbotIndex',
       partitionKey: { name: 'chatbotId', type: dynamodb.AttributeType.STRING },
       projectionType: dynamodb.ProjectionType.ALL,
+    });
+
+    // Add the new GSI
+    this.documentTable.addGlobalSecondaryIndex({
+      indexName: 'ChatbotIndexV2',
+      partitionKey: { name: 'chatbotId', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'uploadDate', type: dynamodb.AttributeType.STRING },
+      projectionType: dynamodb.ProjectionType.ALL,
+    });
+
+     // Add GSI for querying by projectId
+    this.documentTable.addGlobalSecondaryIndex({
+      indexName: 'ProjectIndex',
+      partitionKey: { name: 'projectId', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'uploadDate', type: dynamodb.AttributeType.STRING },
     });
 
     this.userTable = new dynamodb.Table(scope, 'UserTable', {
@@ -63,6 +79,13 @@ export class DynamoDBSetup {
       partitionKey: { name: 'chatbotId', type: dynamodb.AttributeType.STRING },
       sortKey: { name: 'apiKeyId', type: dynamodb.AttributeType.STRING },
       removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    // Output the document table name
+    new cdk.CfnOutput(scope, 'DocumentTableName', {
+      value: this.documentTable.tableName,
+      description: 'Name of the DynamoDB table for document storage',
+      exportName: 'DocumentTableName',
     });
   }
 }

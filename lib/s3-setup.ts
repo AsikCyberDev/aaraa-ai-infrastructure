@@ -10,7 +10,6 @@ export class S3Setup {
   public readonly documentBucket: s3.Bucket;
 
   constructor(scope: Construct) {
-    // Website S3 Bucket and CloudFront OAI setup
     this.websiteBucket = new s3.Bucket(scope, 'WebsiteBucket', {
       websiteIndexDocument: 'index.html',
       websiteErrorDocument: 'index.html',
@@ -20,7 +19,6 @@ export class S3Setup {
     });
 
     this.oai = new cloudfront.OriginAccessIdentity(scope, 'OAI');
-
     this.websiteBucket.addToResourcePolicy(
       new iam.PolicyStatement({
         actions: ['s3:GetObject'],
@@ -29,16 +27,22 @@ export class S3Setup {
       })
     );
 
-    // Document S3 Bucket setup for file uploads
-    this.documentBucket = new s3.Bucket(scope, 'DocumentBucket', {
-      versioned: true,  // Enable versioning (optional)
-      removalPolicy: cdk.RemovalPolicy.RETAIN, // Retain bucket on stack deletion
-      autoDeleteObjects: false, // Do not automatically delete objects on stack deletion
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL, // Block all public access
-      enforceSSL: true, // Enforce SSL connections
+     this.documentBucket = new s3.Bucket(scope, 'DocumentBucket', {
+      versioned: true,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      autoDeleteObjects: false,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      enforceSSL: true,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      cors: [
+        {
+          allowedMethods: [s3.HttpMethods.PUT],
+          allowedOrigins: ['*'],  // In production, replace with your specific origins
+          allowedHeaders: ['*'],
+        },
+      ],
     });
 
-    // Add a policy statement to allow the Lambda function to read/write/delete objects in the bucket
     this.documentBucket.addToResourcePolicy(
       new iam.PolicyStatement({
         actions: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject'],
@@ -46,5 +50,11 @@ export class S3Setup {
         principals: [new iam.ServicePrincipal('lambda.amazonaws.com')],
       })
     );
+
+    new cdk.CfnOutput(scope, 'DocumentBucketName', {
+      value: this.documentBucket.bucketName,
+      description: 'Name of the S3 bucket for document storage',
+      exportName: 'DocumentBucketName',
+    });
   }
 }
